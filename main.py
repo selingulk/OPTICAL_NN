@@ -1,24 +1,14 @@
-
 from core import mvm_bit_serial, mvm_reference
+from config import BITWIDTH, DEFAULT_MATRIX, DEFAULT_VECTOR
 
 
 def main() -> None:
-    # Small unsigned integer test case
-    matrix = [
-        [1, 2, 3],
-        [0, 1, 2],
-        [3, 1, 0],
-    ]
+    simulated_output = mvm_bit_serial(DEFAULT_MATRIX, DEFAULT_VECTOR, BITWIDTH)
+    reference_output = mvm_reference(DEFAULT_MATRIX, DEFAULT_VECTOR)
 
-    vector = [2, 1, 3]
-    bitwidth = 4
-
-    simulated_output = mvm_bit_serial(matrix, vector, bitwidth)
-    reference_output = mvm_reference(matrix, vector)
-
-    print("Matrix:", matrix)
-    print("Vector:", vector)
-    print("Bitwidth:", bitwidth)
+    print("Matrix:", DEFAULT_MATRIX)
+    print("Vector:", DEFAULT_VECTOR)
+    print("Bitwidth:", BITWIDTH)
     print()
     print("Simulated output :", simulated_output)
     print("Reference output :", reference_output)
