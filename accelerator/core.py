@@ -1,7 +1,7 @@
 """Matrix-vector multiplication core for the optical NN simulator."""
 
-from arithmetic import bit_serial_multiply
-from mrr import MRRConfig
+from accelerator.arithmetic import bit_serial_multiply
+from devices.mrr import MRRConfig
 
 
 def _validate_vector(vector: list[int], name: str) -> None:

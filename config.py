@@ -1,6 +1,6 @@
 """Central configuration for the optical neural network simulator."""
 
-from mrr import MRRConfig
+from devices.mrr import MRRConfig
 
 BITWIDTH = 4
 

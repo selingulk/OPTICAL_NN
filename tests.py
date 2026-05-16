@@ -7,11 +7,11 @@ The file intentionally avoids external dependencies so that the repository can
 be cloned and tested immediately.
 """
 
-from arithmetic import bit_serial_multiply, build_partial_products
+from accelerator.arithmetic import bit_serial_multiply, build_partial_products
 from config import BITWIDTH, DEFAULT_MATRIX, DEFAULT_MRR_CONFIG, DEFAULT_VECTOR
-from core import dot_product_bit_serial, mvm_bit_serial, mvm_reference
+from accelerator.core import dot_product_bit_serial, mvm_bit_serial, mvm_reference
 from encoding import from_bits, to_bits
-from mrr import mrr_multiply_bit, optical_transmission
+from devices.mrr import mrr_multiply_bit, optical_transmission
 
 
 def assert_raises(expected_error: type[Exception], function, *args, **kwargs) -> None:
