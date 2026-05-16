@@ -1,76 +1,84 @@
+"""Simple test suite for the optical NN simulator.
+
+Run with:
+    python tests.py
+
+The file intentionally avoids external dependencies so that the repository can
+be cloned and tested immediately.
 """
 
-Right now, we have the first skeleton of the system:
-numbers are encoded into bits, bits are processed through the ideal MRR logic,
-multiplication is built step by step, and then the MVM result is produced.
-
-Before moving on to realistic optical behavior, I wanted a simple way to verify
-that these core parts are working properly. This file gives us that control.
-
-So if we later add new features like loss, voltage-dependent MRR states,
-or Lumerical-based modeling, we can test whether the original logic still works.
-
-In short, this file is here to protect the foundation of the project.
-"""
-
-from encoding import to_bits, from_bits
-from mrr import mrr_multiply_bit
-from arithmetic import bit_serial_multiply
-from core import mvm_bit_serial, mvm_reference
-from config import BITWIDTH, DEFAULT_MATRIX, DEFAULT_VECTOR
-
-def run_tests() -> None:
-    # Inform the user that the test sequence has started
-    print("Running tests...")
-
-    # -----------------------------
-    # encoding.py tests
-    # -----------------------------
-    # Check whether integer-to-bit conversion works correctly
-    assert to_bits(5, 4) == [1, 0, 1, 0], "to_bits failed for 5"
-
-    # Check whether bit-to-integer conversion works correctly
-    assert from_bits([1, 0, 1, 0]) == 5, "from_bits failed for [1,0,1,0]"
-
-    # -----------------------------
-    # mrr.py tests
-    # -----------------------------
-    # Verify the ideal MRR logic behaves like bitwise AND
-    assert mrr_multiply_bit(1, 1) == 1, "mrr_multiply_bit failed for 1,1"
-    assert mrr_multiply_bit(1, 0) == 0, "mrr_multiply_bit failed for 1,0"
-    assert mrr_multiply_bit(0, 1) == 0, "mrr_multiply_bit failed for 0,1"
-    assert mrr_multiply_bit(0, 0) == 0, "mrr_multiply_bit failed for 0,0"
-
-    # -----------------------------
-    # arithmetic.py tests
-    # -----------------------------
-    # Check whether bit-serial multiplication produces the correct values
-    assert bit_serial_multiply(3, 2, 4) == 6, "bit_serial_multiply failed for 3*2"
-    assert bit_serial_multiply(3, 3, 4) == 9, "bit_serial_multiply failed for 3*3"
-    assert bit_serial_multiply(2, 1, 4) == 2, "bit_serial_multiply failed for 2*1"
-
-    # -----------------------------
-    # core.py tests
-    # -----------------------------
-    # Define a small example matrix and input vector
-    
-
-    # Compute the simulated output using our custom bit-serial MVM
-    sim_out = mvm_bit_serial(DEFAULT_MATRIX, DEFAULT_VECTOR, BITWIDTH)
-
-    # Compute the reference output using normal arithmetic
-    ref_out = mvm_reference(DEFAULT_MATRIX, DEFAULT_VECTOR)
-
-    # Check whether the simulated result matches the expected output
-    assert sim_out == [13, 7, 7], "mvm_bit_serial wrong output"
-
-    # Check whether the simulated output matches the mathematical reference
-    assert sim_out == ref_out, "mvm_bit_serial and reference do not match"
-
-    # If all assertions pass, print success message
-    print("All tests passed successfully.")
+from arithmetic import bit_serial_multiply, build_partial_products
+from config import BITWIDTH, DEFAULT_MATRIX, DEFAULT_MRR_CONFIG, DEFAULT_VECTOR
+from core import dot_product_bit_serial, mvm_bit_serial, mvm_reference
+from encoding import from_bits, to_bits
+from mrr import mrr_multiply_bit, optical_transmission
 
 
-# Run the tests only when this file is executed directly
+def assert_raises(expected_error: type[Exception], function, *args, **kwargs) -> None:
+    try:
+        function(*args, **kwargs)
+    except expected_error:
+        return
+    raise AssertionError(f"Expected {expected_error.__name__} was not raised.")
+
+
+def test_encoding_round_trip() -> None:
+    for value in range(16):
+        bits = to_bits(value, BITWIDTH)
+        assert from_bits(bits) == value
+
+
+def test_encoding_validation() -> None:
+    assert_raises(ValueError, to_bits, -1, BITWIDTH)
+    assert_raises(ValueError, to_bits, 16, BITWIDTH)
+    assert_raises(ValueError, from_bits, [1, 0, 2])
+
+
+def test_mrr_bit_behavior() -> None:
+    assert mrr_multiply_bit(0, 0) == 0
+    assert mrr_multiply_bit(0, 1) == 0
+    assert mrr_multiply_bit(1, 0) == 0
+    assert mrr_multiply_bit(1, 1) == 1
+    assert optical_transmission(1, 1, DEFAULT_MRR_CONFIG) > optical_transmission(1, 0, DEFAULT_MRR_CONFIG)
+
+
+def test_bit_serial_multiply_matches_python() -> None:
+    for a in range(16):
+        for b in range(16):
+            assert bit_serial_multiply(a, b, BITWIDTH, DEFAULT_MRR_CONFIG) == a * b
+
+
+def test_partial_products_for_3_times_2() -> None:
+    partials = build_partial_products(3, 2, BITWIDTH, DEFAULT_MRR_CONFIG)
+    active_terms = [(p.a_index, p.b_index, p.shift) for p in partials if p.value == 1]
+    assert active_terms == [(0, 1, 1), (1, 1, 2)]
+    assert bit_serial_multiply(3, 2, BITWIDTH, DEFAULT_MRR_CONFIG) == 6
+
+
+def test_dot_product_and_mvm() -> None:
+    assert dot_product_bit_serial([1, 2, 3], [2, 1, 3], BITWIDTH, DEFAULT_MRR_CONFIG) == 13
+    assert mvm_bit_serial(DEFAULT_MATRIX, DEFAULT_VECTOR, BITWIDTH, DEFAULT_MRR_CONFIG) == mvm_reference(
+        DEFAULT_MATRIX,
+        DEFAULT_VECTOR,
+    )
+
+
+def test_dimension_validation() -> None:
+    assert_raises(ValueError, dot_product_bit_serial, [1, 2], [1], BITWIDTH)
+    assert_raises(ValueError, mvm_bit_serial, [[1, 2], [3]], [1, 2], BITWIDTH)
+    assert_raises(ValueError, mvm_bit_serial, [[1, 2]], [1, 2, 3], BITWIDTH)
+
+
+def run_all_tests() -> None:
+    test_encoding_round_trip()
+    test_encoding_validation()
+    test_mrr_bit_behavior()
+    test_bit_serial_multiply_matches_python()
+    test_partial_products_for_3_times_2()
+    test_dot_product_and_mvm()
+    test_dimension_validation()
+    print("All tests passed.")
+
+
 if __name__ == "__main__":
-    run_tests()
+    run_all_tests()

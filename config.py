@@ -1,4 +1,6 @@
-# Global configuration for the initial simulation skeleton
+"""Central configuration for the optical neural network simulator."""
+
+from mrr import MRRConfig
 
 BITWIDTH = 4
 
@@ -9,3 +11,9 @@ DEFAULT_MATRIX = [
 ]
 
 DEFAULT_VECTOR = [2, 1, 3]
+
+DEFAULT_MRR_CONFIG = MRRConfig(
+    insertion_loss_db=0.0,
+    extinction_ratio_db=20.0,
+    decision_threshold=0.5,
+)
