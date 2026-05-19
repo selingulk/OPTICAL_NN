@@ -1,8 +1,8 @@
 """Run a small demonstration of the optical NN matrix-vector core."""
 
-from arithmetic import build_partial_products, bit_serial_multiply
+from accelerator.arithmetic import build_partial_products, bit_serial_multiply
 from config import BITWIDTH, DEFAULT_MATRIX, DEFAULT_MRR_CONFIG, DEFAULT_VECTOR
-from core import mvm_bit_serial, mvm_reference
+from accelerator.core import mvm_bit_serial, mvm_reference
 
 
 def print_partial_product_trace(a: int, b: int, bitwidth: int) -> None:

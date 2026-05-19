@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from encoding import to_bits
-from mrr import MRRConfig, mrr_multiply_bit
+from devices.mrr import MRRConfig, mrr_multiply_bit
 
 
 @dataclass(frozen=True)
