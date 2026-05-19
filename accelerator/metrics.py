@@ -157,11 +157,13 @@ class ElectronicBaselineEngine:
         clock_frequency_ghz: float = 1.0,
         energy_per_mac_pj: float = 0.5,
         mac_unit_area_um2: float = 2000.0,
+        arch_name: str = "Digital ASIC Baseline (7nm)",
     ):
         self.num_mac_units = num_mac_units
         self.clock_frequency_ghz = clock_frequency_ghz
         self.energy_per_mac_pj = energy_per_mac_pj
         self.mac_unit_area_um2 = mac_unit_area_um2
+        self.arch_name = arch_name
 
     def evaluate(self) -> PPAMetrics:
         macs_per_second = self.num_mac_units * self.clock_frequency_ghz * 1e9
@@ -173,7 +175,7 @@ class ElectronicBaselineEngine:
         area_mm2 = (self.num_mac_units * self.mac_unit_area_um2) / 1_000_000.0
 
         return PPAMetrics(
-            arch_name="Digital ASIC Baseline (7nm)",
+            arch_name=self.arch_name,
             power_mw=power_mw,
             energy_per_mac_pj=self.energy_per_mac_pj,
             throughput_tops=throughput_tops,

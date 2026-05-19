@@ -25,10 +25,11 @@ def main():
     # ---- define workloads ------------------------------------------------------
     mlp = SimpleMLP.get_mnist_mlp()
     cnn = SimpleCNN.get_simple_cnn()
+    medmnist_cnn = SimpleCNN.get_medmnist_cnn(in_channels=3, num_classes=10)
 
     # ---- run inference ---------------------------------------------------------
     print("=" * 80)
-    print("END-TO-END NEURAL NETWORK INFERENCE SIMULATION")
+    print("END-TO-END NEURAL NETWORK INFERENCE SIMULATION (incl. MedMNIST)")
     print("=" * 80)
 
     results = []
@@ -38,20 +39,24 @@ def main():
 
         mlp_result = engine.run_mlp(mlp)
         cnn_result = engine.run_cnn(cnn)
-        results.append((name, mlp_result, cnn_result))
+        medmnist_result = engine.run_cnn(medmnist_cnn)
+        results.append((name, mlp_result, cnn_result, medmnist_result))
 
         print(f"\n{'-' * 80}")
+        print(f"Architecture: {name}")
         print(mlp_result)
         print()
         print(cnn_result)
+        print()
+        print(medmnist_result)
 
     # ---- plots ---------------------------------------------------------------
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     fig.suptitle("End-to-End Neural Network Inference Analysis", fontsize=15, fontweight="bold")
 
     # Unpack results
-    mrr_name, mrr_mlp, mrr_cnn = results[0]
-    mzi_name, mzi_mlp, mzi_cnn = results[1]
+    mrr_name, mrr_mlp, mrr_cnn, mrr_medmnist = results[0]
+    mzi_name, mzi_mlp, mzi_cnn, mzi_medmnist = results[1]
 
     # --- Plot 1: MLP per-layer energy breakdown (stacked bar) ---
     ax = axes[0, 0]
@@ -99,11 +104,11 @@ def main():
 
     # --- Plot 4: Total comparison ---
     ax = axes[1, 1]
-    categories = ["MLP\nEnergy (nJ)", "MLP\nLatency (us)", "CNN\nEnergy (nJ)", "CNN\nLatency (us)"]
-    mrr_vals = [mrr_mlp.total_energy_nj, mrr_mlp.total_latency_us,
-                mrr_cnn.total_energy_nj, mrr_cnn.total_latency_us]
-    mzi_vals = [mzi_mlp.total_energy_nj, mzi_mlp.total_latency_us,
-                mzi_cnn.total_energy_nj, mzi_cnn.total_latency_us]
+    categories = ["MLP\nEnergy", "CNN\nEnergy", "MedMNIST\nEnergy", "MedMNIST\nLatency (us)"]
+    mrr_vals = [mrr_mlp.total_energy_nj, mrr_cnn.total_energy_nj,
+                mrr_medmnist.total_energy_nj, mrr_medmnist.total_latency_us]
+    mzi_vals = [mzi_mlp.total_energy_nj, mzi_cnn.total_energy_nj,
+                mzi_medmnist.total_energy_nj, mzi_medmnist.total_latency_us]
     x3 = np.arange(len(categories))
     ax.bar(x3 - w / 2, mrr_vals, w, label="MRR", color="#4FC3F7", edgecolor="black", linewidth=0.5)
     ax.bar(x3 + w / 2, mzi_vals, w, label="MZI", color="#FFB74D", edgecolor="black", linewidth=0.5)
