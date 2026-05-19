@@ -34,13 +34,18 @@ def main():
     mzi_tile = MZITile(num_omacs=4, clock_frequency_ghz=1)
     mzi = MZIMetricsEngine(mzi_tile).evaluate()
 
-    # 4) Electronic baseline
+    # 4) Electronic baseline (ASIC)
     electronic = ElectronicBaselineEngine(
-        num_mac_units=256, clock_frequency_ghz=1.0
+        num_mac_units=256, clock_frequency_ghz=1.0, arch_name="Digital ASIC Baseline"
+    ).evaluate()
+
+    # 5) TPU baseline
+    tpu = ElectronicBaselineEngine(
+        num_mac_units=16384, clock_frequency_ghz=0.7, energy_per_mac_pj=1.5, mac_unit_area_um2=1500.0, arch_name="TPU Baseline"
     ).evaluate()
 
     # ---- print results ---------------------------------------------------------
-    configs = [baseline, advanced, mzi, electronic]
+    configs = [baseline, advanced, mzi, electronic, tpu]
     for c in configs:
         print(c)
         print()
@@ -48,7 +53,7 @@ def main():
     # ---- plot ------------------------------------------------------------------
     names = [c.arch_name for c in configs]
     x = np.arange(len(names))
-    colors = ["#4FC3F7", "#81C784", "#FFB74D", "#E57373"]
+    colors = ["#4FC3F7", "#81C784", "#FFB74D", "#E57373", "#BA68C8"]
 
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
     fig.suptitle("ONN Architecture Comparison", fontsize=16, fontweight="bold")

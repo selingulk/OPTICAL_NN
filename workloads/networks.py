@@ -41,6 +41,20 @@ class SimpleCNN:
             ]
         )
 
+    @classmethod
+    def get_medmnist_cnn(cls, in_channels: int = 3, num_classes: int = 10) -> "SimpleCNN":
+        """A slightly larger CNN for 28x28x3 MedMNIST datasets."""
+        return cls(
+            conv_layers=[
+                Conv2DLayer(in_channels=in_channels, out_channels=32, kernel_size=3, input_spatial_size=28),
+                Conv2DLayer(in_channels=32, out_channels=64, kernel_size=3, input_spatial_size=14),
+            ],
+            linear_layers=[
+                LinearLayer(in_features=64 * 5 * 5, out_features=128),
+                LinearLayer(in_features=128, out_features=num_classes),
+            ]
+        )
+
     def total_macs(self) -> int:
         conv_macs = sum(layer.num_macs() for layer in self.conv_layers)
         linear_macs = sum(layer.num_macs() for layer in self.linear_layers)

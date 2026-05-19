@@ -39,6 +39,14 @@ def main() -> None:
 
     print_partial_product_trace(a=3, b=2, bitwidth=BITWIDTH)
 
+    print("\n" + "=" * 80)
+    print("Running full benchmark suite (PIXEL + Baselines)...")
+    from experiments.run_all_experiments import main as run_benchmarks
+    run_benchmarks()
+
 
 if __name__ == "__main__":
+    # Support multiprocessing on Windows
+    import multiprocessing
+    multiprocessing.freeze_support()
     main()
