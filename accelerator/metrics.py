@@ -123,7 +123,8 @@ class MZIMetricsEngine:
         phase_shifter_power_mw = omac.phase_shifter_power_mw() * num_omacs
         dac_power_mw = total_lasers * (omac.dac.energy_per_conversion_pj * self.tile.clock_frequency_ghz)
         adc_power_mw = total_pds * (omac.adc.energy_per_conversion_pj * self.tile.clock_frequency_ghz)
-        total_power_mw = laser_power_mw + phase_shifter_power_mw + dac_power_mw + adc_power_mw
+        tia_power_mw = total_pds * (omac.tia.energy_per_bit_pj * self.tile.clock_frequency_ghz)
+        total_power_mw = laser_power_mw + phase_shifter_power_mw + dac_power_mw + adc_power_mw + tia_power_mw
 
         # Performance
         throughput_tops = self.tile.get_peak_tops()

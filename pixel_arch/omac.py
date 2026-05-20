@@ -14,7 +14,7 @@ from devices.laser import Laser
 from devices.noise import NoiseConfig, add_shot_noise, add_thermal_noise
 from devices.photodetector import Photodetector
 from devices.waveguide import Waveguide
-from pixel_arch.pixel_devices import PixelMRRConfig, ThresholdStrategy
+from pixel_arch.pixel_devices import PixelMRRConfig, ThresholdStrategy, pixel_optical_transmission
 
 
 @dataclass(frozen=True)
@@ -42,12 +42,11 @@ class Pixel_OE_OMAC(OMAC):
         if max_val == 0:
             max_val = 1
 
-        on_power = 10 ** (-self.pixel_mrr_config.insertion_loss_db / 10)
-        off_power = on_power * 10 ** (-self.pixel_mrr_config.extinction_ratio_db / 10)
-
         dynamic_threshold_mw = self.pixel_mrr_config.get_dynamic_threshold()
+        # Scale expected threshold by laser power and waveguide loss to be physically consistent
+        threshold_power_mw = self.signal_path_single(laser_power, dynamic_threshold_mw)
         # Convert the optical power threshold to an expected photocurrent threshold
-        threshold_ua = self.pd.get_photocurrent_ua(dynamic_threshold_mw)
+        threshold_ua = self.pd.get_photocurrent_ua(threshold_power_mw)
 
         total_electrical_sum = 0.0
 
@@ -55,10 +54,21 @@ class Pixel_OE_OMAC(OMAC):
             inp_norm = inp / max_val
             wt_norm = wt / max_val
 
+            # Validate that inputs and weights are strictly binary (0 or 1 at the physical level)
+            if inp_norm not in (0.0, 1.0) or wt_norm not in (0.0, 1.0):
+                raise ValueError(
+                    f"Pixel_OE_OMAC only supports binary (0 or 1) inputs and weights "
+                    f"at the normalized level. Got input={inp} (normalized {inp_norm}) "
+                    f"and weight={wt} (normalized {wt_norm}) with bitwidth={bitwidth}."
+                )
+
+            input_bit = 1 if inp_norm == 1.0 else 0
+            weight_bit = 1 if wt_norm == 1.0 else 0
+
             input_power = laser_power * inp_norm
-            # Use idealized transmission here, thermal drift is handled in the device function if used directly, 
-            # but for analogue MVM we use the formula. Let's add drift if needed, or keep it simple.
-            mrr_trans = off_power + wt_norm * (on_power - off_power)
+            
+            # Incorporate physical transmission with drift
+            mrr_trans = pixel_optical_transmission(input_bit, weight_bit, self.pixel_mrr_config, rng)
             
             pwr = self.signal_path_single(input_power, mrr_trans)
 
@@ -74,7 +84,7 @@ class Pixel_OE_OMAC(OMAC):
             # TIA Decision (Digitization)
             bit_value = 1 if photocurrent_ua >= threshold_ua else 0
 
-            # Electrical Accumulation (Shift-Accumulate via CLA in reality, standard sum here)
+            # Electrical Accumulation
             total_electrical_sum += bit_value
 
         return total_electrical_sum
@@ -105,9 +115,6 @@ class Pixel_OO_OMAC(OMAC):
         if max_val == 0:
             max_val = 1
 
-        on_power = 10 ** (-self.pixel_mrr_config.insertion_loss_db / 10)
-        off_power = on_power * 10 ** (-self.pixel_mrr_config.extinction_ratio_db / 10)
-
         # MZI Delay Line Simulation (Queue)
         # In the PIXEL paper, light pulses are delayed by mz_delay = c/(n*f) - d_mzi
         # We abstract this by having a cycle-accurate delay queue.
@@ -119,8 +126,21 @@ class Pixel_OO_OMAC(OMAC):
             inp_norm = inp / max_val
             wt_norm = wt / max_val
 
+            # Validate that inputs and weights are strictly binary (0 or 1 at the physical level)
+            if inp_norm not in (0.0, 1.0) or wt_norm not in (0.0, 1.0):
+                raise ValueError(
+                    f"Pixel_OO_OMAC only supports binary (0 or 1) inputs and weights "
+                    f"at the normalized level. Got input={inp} (normalized {inp_norm}) "
+                    f"and weight={wt} (normalized {wt_norm}) with bitwidth={bitwidth}."
+                )
+
+            input_bit = 1 if inp_norm == 1.0 else 0
+            weight_bit = 1 if wt_norm == 1.0 else 0
+
             input_power = laser_power * inp_norm
-            mrr_trans = off_power + wt_norm * (on_power - off_power)
+            
+            # Incorporate physical transmission with drift
+            mrr_trans = pixel_optical_transmission(input_bit, weight_bit, self.pixel_mrr_config, rng)
             
             pwr = self.signal_path_single(input_power, mrr_trans)
             

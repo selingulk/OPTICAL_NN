@@ -75,7 +75,19 @@ class InferenceEngine:
         if isinstance(tile, MZITile):
             self._metrics = MZIMetricsEngine(tile).evaluate()
         else:
-            self._metrics = MetricsEngine(tile).evaluate()
+            # Check if tile uses PIXEL OMAC templates to select the correct metrics engine
+            try:
+                from pixel_arch.omac import Pixel_OE_OMAC, Pixel_OO_OMAC
+                from pixel_arch.metrics import PixelOEMetricsEngine, PixelOOMetricsEngine
+                
+                if isinstance(tile.omac_template, Pixel_OE_OMAC):
+                    self._metrics = PixelOEMetricsEngine(tile).evaluate()
+                elif isinstance(tile.omac_template, Pixel_OO_OMAC):
+                    self._metrics = PixelOOMetricsEngine(tile).evaluate()
+                else:
+                    self._metrics = MetricsEngine(tile).evaluate()
+            except ImportError:
+                self._metrics = MetricsEngine(tile).evaluate()
 
     def run_mlp(self, mlp) -> InferenceResult:
         """Run inference for a SimpleMLP workload."""

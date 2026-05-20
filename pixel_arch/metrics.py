@@ -47,8 +47,9 @@ class PixelOEMetricsEngine:
         # Comparators use less power than high-res ADCs
         comparator_power_mw = total_comparators * (0.1 * self.tile.clock_frequency_ghz)
         adder_power_mw = total_adders * (0.05 * self.tile.clock_frequency_ghz)
+        tia_power_mw = total_pds * (omac.tia.energy_per_bit_pj * self.tile.clock_frequency_ghz)
         
-        total_power_mw = laser_power_mw + dac_power_mw + comparator_power_mw + adder_power_mw
+        total_power_mw = laser_power_mw + dac_power_mw + comparator_power_mw + adder_power_mw + tia_power_mw
 
         throughput_tops = self.tile.get_peak_tops()
 
@@ -110,8 +111,11 @@ class PixelOOMetricsEngine:
         laser_power_mw = total_lasers * omac.laser.electrical_power_mw
         dac_power_mw = total_lasers * (omac.dac.energy_per_conversion_pj * self.tile.clock_frequency_ghz)
         adc_power_mw = total_pds * (omac.adc.energy_per_conversion_pj * self.tile.clock_frequency_ghz)
+        tia_power_mw = total_pds * (omac.tia.energy_per_bit_pj * self.tile.clock_frequency_ghz)
+        # Static phase shifter power for delay line MZIs (2 phase shifters per MZI at 5.0 mW each)
+        mzi_power_mw = total_mzis * 2 * 5.0
         
-        total_power_mw = laser_power_mw + dac_power_mw + adc_power_mw
+        total_power_mw = laser_power_mw + dac_power_mw + adc_power_mw + tia_power_mw + mzi_power_mw
 
         throughput_tops = self.tile.get_peak_tops()
 

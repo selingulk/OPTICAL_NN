@@ -22,6 +22,9 @@ from devices.photodetector import Photodetector
 from devices.waveguide import Waveguide
 from encoding import from_bits, to_bits
 from workloads.networks import SimpleMLP, SimpleCNN
+from pixel_arch.pixel_devices import PixelMRRConfig, ThresholdStrategy, pixel_optical_transmission
+from pixel_arch.omac import Pixel_OE_OMAC, Pixel_OO_OMAC
+from pixel_arch.metrics import PixelOEMetricsEngine, PixelOOMetricsEngine
 
 import random
 
@@ -287,6 +290,104 @@ def test_workloads() -> None:
 
 
 # ============================================================================
+# PIXEL Architecture Tests
+# ============================================================================
+
+def test_pixel_mrr_config() -> None:
+    from pixel_arch.pixel_devices import PixelMRRConfig, ThresholdStrategy
+    
+    # 1. FIXED strategy
+    cfg_fixed = PixelMRRConfig(threshold_strategy=ThresholdStrategy.FIXED, fixed_threshold=0.3)
+    assert cfg_fixed.get_dynamic_threshold() == 0.3
+    
+    # 2. MEAN_POWER strategy
+    cfg_mean = PixelMRRConfig(insertion_loss_db=0.0, extinction_ratio_db=20.0, threshold_strategy=ThresholdStrategy.MEAN_POWER)
+    expected_on = 1.0
+    expected_off = 0.01
+    assert abs(cfg_mean.get_dynamic_threshold() - (expected_on + expected_off) / 2.0) < 1e-7
+    
+    # 3. SCALED_ON strategy
+    cfg_scaled = PixelMRRConfig(insertion_loss_db=0.0, threshold_strategy=ThresholdStrategy.SCALED_ON, threshold_scale_factor=0.6)
+    assert abs(cfg_scaled.get_dynamic_threshold() - 0.6) < 1e-7
+
+
+def test_pixel_oe_omac() -> None:
+    from pixel_arch.omac import Pixel_OE_OMAC
+    from pixel_arch.pixel_devices import PixelMRRConfig
+    from devices.waveguide import Waveguide
+    
+    # Test valid binary inputs / weights
+    oe_omac = Pixel_OE_OMAC(pixel_mrr_config=PixelMRRConfig(thermal_drift_std_db=0.0))
+    res = oe_omac.compute_dot_product_analogue([15, 0], [15, 15], bitwidth=4)
+    assert res == 1.0
+    
+    # Test non-binary inputs/weights validation rejection
+    assert_raises(ValueError, oe_omac.compute_dot_product_analogue, [7], [15], bitwidth=4)
+    assert_raises(ValueError, oe_omac.compute_dot_product_analogue, [15], [7], bitwidth=4)
+    
+    # Test Loss vs No-Loss Simulation support
+    oe_ideal = Pixel_OE_OMAC(
+        pixel_mrr_config=PixelMRRConfig(insertion_loss_db=0.0, thermal_drift_std_db=0.0),
+        wg=Waveguide(loss_db_per_cm=0.0)
+    )
+    oe_lossy = Pixel_OE_OMAC(
+        pixel_mrr_config=PixelMRRConfig(insertion_loss_db=2.0, thermal_drift_std_db=0.5),
+        wg=Waveguide(loss_db_per_cm=2.0)
+    )
+    
+    res_ideal = oe_ideal.compute_dot_product_analogue([15], [15], bitwidth=4)
+    res_lossy = oe_lossy.compute_dot_product_analogue([15], [15], bitwidth=4)
+    assert res_ideal == 1.0
+    assert res_lossy in (0.0, 1.0)
+
+
+def test_pixel_oo_omac() -> None:
+    from pixel_arch.omac import Pixel_OO_OMAC
+    from pixel_arch.pixel_devices import PixelMRRConfig
+    from devices.waveguide import Waveguide
+    
+    oo_omac = Pixel_OO_OMAC(pixel_mrr_config=PixelMRRConfig(thermal_drift_std_db=0.0))
+    res = oo_omac.compute_dot_product_analogue([15, 0], [15, 15], bitwidth=4)
+    assert res > 0.0
+    
+    # Test validation rejection
+    assert_raises(ValueError, oo_omac.compute_dot_product_analogue, [7], [15], bitwidth=4)
+    
+    # Test Loss vs No-Loss Simulation support
+    oo_ideal = Pixel_OO_OMAC(
+        pixel_mrr_config=PixelMRRConfig(insertion_loss_db=0.0, thermal_drift_std_db=0.0),
+        wg=Waveguide(loss_db_per_cm=0.0)
+    )
+    oo_lossy = Pixel_OO_OMAC(
+        pixel_mrr_config=PixelMRRConfig(insertion_loss_db=2.0, thermal_drift_std_db=0.5),
+        wg=Waveguide(loss_db_per_cm=2.0)
+    )
+    res_ideal = oo_ideal.compute_dot_product_analogue([15], [15], bitwidth=4)
+    res_lossy = oo_lossy.compute_dot_product_analogue([15], [15], bitwidth=4)
+    assert res_ideal > 0.0
+    assert res_lossy >= 0.0
+
+
+def test_pixel_metrics() -> None:
+    from pixel_arch.omac import Pixel_OE_OMAC, Pixel_OO_OMAC
+    
+    oe_tile = ONNTile(num_omacs=4, clock_frequency_ghz=1, omac_template=Pixel_OE_OMAC())
+    oo_tile = ONNTile(num_omacs=4, clock_frequency_ghz=1, omac_template=Pixel_OO_OMAC())
+    
+    # Check InferenceEngine correctly selects the appropriate metrics engine
+    engine_oe = InferenceEngine(oe_tile, bitwidth=4)
+    engine_oo = InferenceEngine(oo_tile, bitwidth=4)
+    
+    assert engine_oe._metrics.arch_name == "PIXEL OE (Optoelectronic)"
+    assert engine_oo._metrics.arch_name == "PIXEL OO (All-Optical)"
+    
+    assert engine_oe._metrics.power_mw > 0
+    assert engine_oe._metrics.area_mm2 > 0
+    assert engine_oo._metrics.power_mw > 0
+    assert engine_oo._metrics.area_mm2 > 0
+
+
+# ============================================================================
 # Runner
 # ============================================================================
 
@@ -328,6 +429,11 @@ def run_all_tests() -> None:
         test_inference_cnn,
         # Workloads
         test_workloads,
+        # PIXEL sub-package
+        test_pixel_mrr_config,
+        test_pixel_oe_omac,
+        test_pixel_oo_omac,
+        test_pixel_metrics,
     ]
 
     passed = 0
