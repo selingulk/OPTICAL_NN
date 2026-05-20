@@ -79,13 +79,15 @@ OPTICAL_NN/
 |   |-- networks.py         # SimpleMLP (MNIST) and SimpleCNN definitions
 |
 |-- experiments/            # Runnable experiment scripts (produce plots)
+|   |-- run_all_experiments.py     # Run all available experiments sequentially
 |   |-- run_mvm_demo.py            # MVM correctness + signal-path demo
 |   |-- run_architecture_comparison.py  # MRR vs MZI vs electronic PPA
 |   |-- run_layer_sweep.py         # Energy/latency scaling with layer size
 |   |-- run_nonideal_sweep.py      # MRR non-ideality error analysis
-|   |-- run_inference.py           # End-to-end MLP/CNN inference
+|   |-- run_inference.py           # End-to-end network inference
 |
 |-- results/                # Generated plots (PNG)
+|   |-- report_figures/     # Pre-generated figures for reports
 |-- encoding.py             # Bit encoding/decoding utilities
 |-- config.py               # Default simulation parameters
 |-- main.py                 # Quick demo entry point
@@ -121,7 +123,8 @@ python tests.py
 ### Run Experiments
 
 ```bash
-python experiments/run_mvm_demo.py              # MVM + signal path demo
+python experiments/run_all_experiments.py         # Run all available experiments
+python experiments/run_mvm_demo.py                # MVM + signal path demo
 python experiments/run_architecture_comparison.py # Architecture PPA comparison
 python experiments/run_layer_sweep.py             # Layer size scaling
 python experiments/run_nonideal_sweep.py          # Non-ideal MRR analysis
@@ -183,12 +186,12 @@ All experiments save plots to the `results/` directory.
 ## Sample Results
 
 ### Architecture Comparison
-| Metric | MRR Baseline | MRR Advanced | MZI-Mesh | Digital ASIC |
-|--------|-------------|-------------|----------|-------------|
-| Power (mW) | 3,309 | 4,070 | 8,096 | 128 |
-| Throughput (TOPS) | 2.05 | 16.38 | 2.05 | 0.51 |
-| Energy/MAC (pJ) | 3.23 | 0.50 | 7.91 | 0.50 |
-| Area (mm^2) | 0.26 | 1.05 | 4.96 | 0.51 |
+| Metric | MRR Baseline | MRR Advanced | MZI-Mesh | Digital ASIC | TPU Baseline |
+|--------|-------------|-------------|----------|-------------|--------------|
+| Power (mW) | 3,309 | 4,070 | 8,096 | 128 | 17,203 |
+| Throughput (TOPS) | 2.05 | 16.38 | 2.05 | 0.51 | 22.94 |
+| Energy/MAC (pJ) | 3.23 | 0.50 | 7.91 | 0.50 | 1.50 |
+| Area (mm^2) | 0.26 | 1.05 | 4.96 | 0.51 | 24.58 |
 
 ### Inference: SimpleMLP (MNIST) on MRR Tile
 | Layer | MACs | Cycles | Latency (us) | Energy (nJ) |
