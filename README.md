@@ -36,12 +36,14 @@ metrics for different architectural configurations.
                                    Output Vector
 ```
 
-Two compute architectures are supported:
+Four compute architectures are supported:
 
 | Architecture | Weight Encoding | Compute Style | Key Component |
 |-------------|----------------|---------------|---------------|
 | **MRR-based** | Binary weight bits on microring resonators | Bit-serial multiply-accumulate | MRR array |
 | **MZI-mesh** | Phase-encoded weights in MZI mesh | Analogue unitary transform | Clements/Reck mesh |
+| **PIXEL OE** | Binary weight bits on MRRs | Optoelectronic: Optical multiply, electrical accumulate | MRR + CLA Adders |
+| **PIXEL OO** | Binary weight bits on MRRs | All-Optical: Optical multiply, optical delay line accumulate| MRR + MZI Delay Lines |
 
 ---
 
@@ -65,6 +67,12 @@ OPTICAL_NN/
 |   |-- core.py             # Matrix-vector multiplication engine
 |   |-- metrics.py          # PPA evaluation (MRR, MZI, electronic baseline)
 |   |-- inference.py        # End-to-end network inference mapper
+|
+|-- pixel_arch/             # PIXEL architecture implementations
+|   |-- omac.py             # Optoelectronic (OE) and All-Optical (OO) OMAC variants
+|   |-- pixel_devices.py    # MRR thermal drift and dynamic TIA threshold models
+|   |-- metrics.py          # PPA evaluation for OE and OO designs
+|   |-- run_pixel_demo.py   # PIXEL architecture demonstration script
 |
 |-- workloads/              # Neural network workload definitions
 |   |-- cnn_layers.py       # Conv2D and Linear layer models
@@ -118,6 +126,7 @@ python experiments/run_architecture_comparison.py # Architecture PPA comparison
 python experiments/run_layer_sweep.py             # Layer size scaling
 python experiments/run_nonideal_sweep.py          # Non-ideal MRR analysis
 python experiments/run_inference.py               # End-to-end network inference
+python pixel_arch/run_pixel_demo.py               # PIXEL OE/OO architecture demo
 ```
 
 All experiments save plots to the `results/` directory.
@@ -133,6 +142,7 @@ All experiments save plots to the `results/` directory.
 - **Photodetector**: Responsivity, dark current, bandwidth
 - **Waveguide**: Propagation loss (dB/cm)
 - **Electrical**: DAC, ADC, TIA, SERDES energy models
+- **PIXEL Devices**: MRR thermal drift modeling (Gaussian perturbations to IL/ER) and dynamic TIA decision thresholds (Fixed, Mean Power, Scaled On)
 
 ### 2. Noise and Non-Ideal Effects
 - Shot noise (Poisson-approximated Gaussian)
@@ -153,6 +163,8 @@ All experiments save plots to the `results/` directory.
 ### 5. Architecture Comparison
 - **MRR-based ONN**: Bit-serial, MRR weight bank, compact area
 - **MZI-mesh ONN**: Analogue, Clements/Reck decomposition, higher power
+- **PIXEL OE (Optoelectronic)**: MRR multiply, electrical accumulate via CLA, individual comparators per MRR
+- **PIXEL OO (All-Optical)**: MRR multiply, passive optical accumulate via MZI delay lines, single ADC per output
 - **Digital ASIC baseline**: 7nm electronic MAC array for reference
 
 ### 6. PPA Metrics Engine
